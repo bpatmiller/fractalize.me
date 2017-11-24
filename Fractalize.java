@@ -249,9 +249,9 @@ public class Fractalize {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				if (groups[x][y]==0) {
 					++count;
-					expand(x,y,count,2000);
+					expand(x,y,count,1000);
 				} else {
-					expand(x,y,groups[x][y],2000);
+					expand(x,y,groups[x][y],1000);
 				}
 
 			}
@@ -320,10 +320,10 @@ public class Fractalize {
 		// final variables for the program
 		final double scale = 1.0;
 		final double ratio = 1.0;
-		final int maxiters = 62;
-		final int lejas = 180;
+		final int maxiters = 32;
+		final int lejas = 120;
 		//final double lejaRatio = 0.1;
-		final int colors = 2;
+		final int colors = 3;
 		final int cutoff = 30;
 
 		// read input file
@@ -335,7 +335,7 @@ public class Fractalize {
 		layers = layersList.toArray(layers);
 		int segments = layers.length;
 
-		BufferedImage image = new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR);
+		BufferedImage image = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);
 		// draw the group distribution
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
@@ -352,7 +352,7 @@ public class Fractalize {
 			image = layers[index];
 			ImageIO.write(image, "png", new File("layer"+index+".png"));
 		}*/
-
+		image = new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR);
 		int xres = (int)(startImage.getWidth()*ratio);
 		int yres = (int)(startImage.getHeight()*ratio);
 		int col;
@@ -364,7 +364,7 @@ public class Fractalize {
 		Complex offset;
 	    startImage = ImageIO.read(new File("in/in.png"));
 
-		for (int index=0; index<segments; ++index) {
+		for (int index=1; index<segments; ++index) {
 			System.out.print(index + "||");
 			pixels = ((DataBufferByte) layers[index].getRaster().getDataBuffer()).getData();
 			S = bytes2set(pixels, xres, yres, scale, cutoff);
@@ -396,9 +396,9 @@ public class Fractalize {
 							}
 						}
 						if (conv) {
-							myColor = Color.getHSBColor((float)index/(float)segments,(float)0.6,(float)0.6);
-							//col = startImage.getRGB( complex2x(offset, xres, scale), complex2y(offset, yres, scale));
-							col = myColor.getRGB();
+							//myColor = Color.getHSBColor((float)index/(float)segments,(float)0.6,(float)0.6);
+							col = startImage.getRGB( complex2x(offset, xres, scale), complex2y(offset, yres, scale));
+							//col = myColor.getRGB();
 							image.setRGB(x,y,col);
 						}
 					}

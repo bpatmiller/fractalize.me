@@ -1,3 +1,4 @@
 *.class
-out/*.png
-in/*.png
+out/*
+in/*
+scratch/*
