@@ -6,6 +6,10 @@ Given an input image, this program breaks the image up into smaller components a
 ### How do I use it?
 Compile the .java files with javac, put a png in the in/ directory, and run Fractalize.class. This project was done in pure Java, so it has no weird dependencies.
 
+Use `make` to build the source files.
+
+Use `make demo` to run an example.
+
 ### Credits
 [Fekete polynomials and shapes of Julia sets](https://arxiv.org/abs/1607.05055)
 
