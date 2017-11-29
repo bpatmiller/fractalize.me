@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
+import java.util.Stack;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
@@ -14,30 +15,12 @@ import java.awt.Color;
 public class Fractalize {
 
 	public static BufferedImage startImage;
+	public static BufferedImage kImage;
 	public static int[][] groups;
+	public static int[] groupConv;
+	public static ArrayList<int[]> layerColors = new ArrayList<int[]>();
+	public static ArrayList<Integer> layerColors2;
 
-	// mostly for debugging purposes, generates a big "H"
-	public static ArrayList<Complex> unitH( int n ) {
-		ArrayList<Complex> S = new ArrayList<Complex>();
-		for (int i=-n; i<=n; ++i) {
-			for (int j=-n; j<=n; ++j) {
-				if ( (Math.abs((float)i/(float)n) > 0.6) || (((float)j/(float)n>=-0.3) && ((float)j/(float)n<=0.3)))
-					S.add(new Complex((double)i/(double)n, (double)j/(double)n));
-			}
-		}
-		return S;
-	}
-	// generates a filled unit circle
-	public static ArrayList<Complex> unitCircle( int n ) {
-		ArrayList<Complex> S = new ArrayList<Complex>();
-		for (int i=-n; i<=n; ++i) {
-			for (int j=-n; j<=n; ++j) {
-				if ( new Complex((double)i/(double)n, (double)j/(double)n).abs()<0.5 )
-					S.add(new Complex((double)i/(double)n, (double)j/(double)n));
-			}
-		}
-		return S;
-	}
 	// calculates PI(z-z_j)
 	public static double piz( List<Complex> lpts, ArrayList<Complex> S, int s) {
 		int ll = lpts.size();
@@ -56,8 +39,6 @@ public class Fractalize {
 		if (n>S.size()/2) n = S.size()/2;
 		int sl = S.size();
 		List<Complex> lpts = new ArrayList<Complex>(n);
-		//System.out.println();
-		//System.out.print("progress out of "+n+":");
 		for (int j=0; j<n; ++j) {
 			double max = 0;
 			int smax = 0;
@@ -73,7 +54,6 @@ public class Fractalize {
 			lpts.add(S.get(smax));
 			S.remove(smax);
 			--sl;
-			//System.out.print(j+"|");
 		}
 		return lpts;
 	}
@@ -199,48 +179,53 @@ public class Fractalize {
         return image;
     }
 
-	public static void expand(int x, int y, int n, int depth){
-		--depth;
-		if (depth>0) {
-			groups[x][y]=n;
-			boolean bottom = false;
-			boolean top = false;
-			boolean left = false;
-			boolean right = false;
-			// check for bounds:
-			if( x<=0 ) left = true;
-			if( x>=groups.length-1) right = true;
-			if( y<=0 ) bottom = true ;
-			if( y>=groups[0].length-1) top = true;
+	public static void expand(int x, int y, int sub){
+		int[] temp = new int[3];
 
-			if( !left ) {
-				if( (startImage.getRGB(x-1,y)==startImage.getRGB(x,y)) && (groups[x-1][y]==0) ) expand(x-1,y,n,depth);
-				if ( !bottom ) {
-					if( (startImage.getRGB(x-1,y-1)==startImage.getRGB(x,y)) && (groups[x-1][y-1]==0) ) expand(x-1,y-1,n,depth);
-				}
-				if ( !top ) {
-					if( (startImage.getRGB(x-1,y+1)==startImage.getRGB(x,y)) && (groups[x-1][y+1]==0) ) expand(x-1,y+1,n,depth);
-				}
-			}
-			if( !right ) {
-				if( (startImage.getRGB(x+1,y)==startImage.getRGB(x,y)) && (groups[x+1][y]==0) ) expand(x+1,y,n,depth);
-				if ( !bottom ) {
-					if( (startImage.getRGB(x+1,y-1)==startImage.getRGB(x,y)) && (groups[x+1][y-1]==0) ) expand(x+1,y-1,n,depth);
-				}
-				if ( !top ) {
-					if( (startImage.getRGB(x+1,y+1)==startImage.getRGB(x,y)) && (groups[x+1][y+1]==0) ) expand(x+1,y+1,n,depth);
-				}
-			}
-			if( !bottom ) {
-				if( (startImage.getRGB(x,y-1)==startImage.getRGB(x,y)) && (groups[x][y-1]==0) ) expand(x,y-1,n,depth);
-			}
-			if( !top ) {
-				if( (startImage.getRGB(x,y+1)==startImage.getRGB(x,y)) && (groups[x][y+1]==0) ) expand(x,y+1,n,depth);
-			}
-		}	
+		int ct = 0;
+		int col, red, green, blue;
+		Stack<int[]> yeet = new Stack<int[]>();
+		yeet.push(new int[]{x, y, sub});
+		int[] curr = null;
+
+		while (!yeet.isEmpty()){
+			curr = yeet.pop();
+			// color stuff
+			++ct;
+			col = startImage.getRGB(curr[0],curr[1]);
+			temp[0] = ((col >> 16) & 0xFF) + temp[0];
+			temp[1] = ((col >> 8) & 0xFF) + temp[1];
+			temp[2] = (col & 0xFF) + temp[2];
+			// end color stuff
+			groups[curr[0]][curr[1]] = sub;
+
+			if ( followable(curr[0]-1,curr[1],sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0]-1,curr[1]) ) yeet.push(new int[]{curr[0]-1, curr[1], sub});	
+			if ( followable(curr[0]+1,curr[1],sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0]+1,curr[1]) ) yeet.push(new int[]{curr[0]+1, curr[1], sub});	
+			if ( followable(curr[0],curr[1]-1,sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0],curr[1]-1) ) yeet.push(new int[]{curr[0], curr[1]-1, sub});	
+			if ( followable(curr[0],curr[1]+1,sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0],curr[1]+1) ) yeet.push(new int[]{curr[0], curr[1]+1, sub});
+		}
+		temp[0] = temp[0]/ct;
+		temp[1] = temp[1]/ct;
+		temp[2] = temp[2]/ct;
+		// color stuff
+		layerColors.add(temp);
+		// end color stuff
 	}
 
-	public static ArrayList<BufferedImage> splitLayers(double ratio) {
+	public static boolean followable(int x,int y,int sub) {
+		if (x>=0 && x<groups.length && y>=0 && y<groups[0].length && groups[x][y]!=sub) return true;
+		return false;
+	}
+
+	public static void replaceGroups(int sub, int n) {
+		for (int x=0; x<groups.length; ++x) {
+			for (int y=0; y<groups[0].length; ++y) {
+				if(groups[x][y]==sub) groups[x][y]=n;
+			}
+		}
+	}
+
+	public static ArrayList<BufferedImage> splitLayers(double ratio, int cutoff) {
 		groups = new int[startImage.getWidth()][startImage.getHeight()];
 		int count = 0;
 
@@ -248,30 +233,52 @@ public class Fractalize {
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				if (groups[x][y]==0) {
-					++count;
-					expand(x,y,count,1000);
-				} else {
-					expand(x,y,groups[x][y],1000);
+						//System.out.println("new gp" + x + "," + y);
+						++count;
+						expand(x,y,-1);
+						replaceGroups(-1,count);
 				}
-
 			}
 		}
 
-		// use that int array to split the input image into layers
-		ArrayList<BufferedImage> layers = new ArrayList<BufferedImage>(count);
-		for (int i=0; i<count; ++i) {
-			layers.add(new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR));
-		}
+		// calculate group sizes
+		int[] groupSizes = new int[count];
+		groupConv = new int[count];
+		int temp = 0;
+		int rd = (new Color(200,0,0)).getRGB();
 
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
-				(layers.get(groups[x][y]-1)).setRGB(x,y,new Color(200,0,0).getRGB());
+				groupSizes[groups[x][y]-1]+=1;
 			}
 		}
 
+		// add only valid groups
+		ArrayList<BufferedImage> layers = new ArrayList<BufferedImage>();
+		layerColors2 = new ArrayList<Integer>();
 		for (int i=0; i<count; ++i) {
+			if (groupSizes[i]>=cutoff) {
+				layers.add(new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR));
+				layerColors2.add( new Color( layerColors.get(i)[0],layerColors.get(i)[1],layerColors.get(i)[2] ).getRGB() );
+				groupConv[i] = temp;
+				++temp;
+			}
+		}
+
+		// write valid groups to layer array
+		for (int x=0; x<startImage.getWidth(); ++x) {
+			for (int y=0; y<startImage.getHeight(); ++y) {
+				if (groupSizes[groups[x][y]-1] >= cutoff) {
+					layers.get( groupConv[groups[x][y]-1] ).setRGB(x,y,rd); 
+				}
+			}
+		}
+		System.out.println("done making seperate image layers");
+		
+		for (int i=0; i<layers.size(); ++i) {
 			layers.set(i, sobel(layers.get(i)));
 		}
+		System.out.println("done applying sobel operator");
 		return layers;
 	}
 
@@ -293,8 +300,7 @@ public class Fractalize {
 				S.add( xy2complex(x,y,xres,yres,scale) );
 			}
 		}		}
-
-		if (S.size()>=cutoff) return S;
+		if (S.size()>cutoff) return S;
 		return null;
 	}
 
@@ -317,98 +323,88 @@ public class Fractalize {
 	}
 
 	public static void main( String[] args ) throws IOException {
-		// final variables for the program
+		// runtime variables for the program
 		final double scale = 1.0;
 		final double ratio = 1.0;
-		final int maxiters = 32;
-		final int lejas = 120;
-		//final double lejaRatio = 0.1;
-		final int colors = 3;
-		final int cutoff = 30;
+		final int maxiters = 8;
+		final int lejas = 100;
+		final int colors = 4;
+		final int cutoff = 100;
 
-		// read input file
+		// read/segment image
+	    startImage = ImageIO.read(new File("in/in.png"));
 		KMeans kmeans = new KMeans();
-		startImage = kmeans.run("in/in.png","out.png",colors,"i");
-		ImageIO.write(startImage, "png", new File("out/kmeans.png"));
-		ArrayList<BufferedImage> layersList = splitLayers(ratio);
-		BufferedImage[] layers = new BufferedImage[layersList.size()];
-		layers = layersList.toArray(layers);
-		int segments = layers.length;
+		kImage = kmeans.run(startImage,"out.png",colors,"i");
+		ArrayList<BufferedImage> layersList = splitLayers(ratio, cutoff);
+		int segments=layersList.size();
+		System.out.println("segments: "+ segments);
 
-		BufferedImage image = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);
+		int col;
+		BufferedImage image = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);		
 		// draw the group distribution
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
-				int cc = new Color(0,0,0).getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
-				image.setRGB(x,y,cc);
-
+				col = new Color(0,0,0).getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
+				//col = layerColors2.get(groupConv[groups[x][y]-1]);
+				image.setRGB(x,y,col);
 			}
 		}
 		ImageIO.write(image, "png", new File("out/groups.png"));
-		
 
-		// draw out the layers of the image
-		/*for (int index=0; index<segments; ++index) {
-			image = layers[index];
-			ImageIO.write(image, "png", new File("layer"+index+".png"));
-		}*/
-		image = new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR);
 		int xres = (int)(startImage.getWidth()*ratio);
-		int yres = (int)(startImage.getHeight()*ratio);
-		int col;
-		boolean conv = true;
-		byte[] pixels = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+		int yres = (int)(startImage.getHeight()*ratio);		
+		image = new BufferedImage(xres, yres, BufferedImage.TYPE_4BYTE_ABGR);
+
+		byte[] pixels;
 		ArrayList<Complex> S;
 		List<Complex> L;
-		image = new BufferedImage(xres,yres,BufferedImage.TYPE_3BYTE_BGR);
+		double asubn;
 		Complex offset;
-	    startImage = ImageIO.read(new File("in/in.png"));
+		Complex z;
+		Complex z1;
+		int samecount;
+		int k;
 
-		for (int index=1; index<segments; ++index) {
+		for (int index=0; index<segments; ++index) {
 			System.out.print(index + "||");
-			pixels = ((DataBufferByte) layers[index].getRaster().getDataBuffer()).getData();
+			pixels = ((DataBufferByte) layersList.get(index).getRaster().getDataBuffer()).getData();
 			S = bytes2set(pixels, xres, yres, scale, cutoff);
 			if(S!=null) {
+				System.out.print("set size: "+S.size());
+				// recenter S (important for mathematical purposes)
 				offset = norm(S).scale(scale);
 				normalize(S,offset);
-				//System.out.println(offset);
-				System.out.print("set size: "+S.size());
-				System.out.print("//computing leja pts:");
+				
 				// compute leja points
+				System.out.print("//computing leja pts:");
 				L = leja(S,lejas);
-				double asubn = an(L);
+				asubn = an(L);
 				System.out.println("//done w leja");
-				// init vars for fractal
-				int k1 = 0;
-				Color myColor;
+				// set color
+				col = layerColors2.get(index);
+
 				// iterate pixel by pixel
 				for (int x=0; x<xres; ++x) {
 					for(int y=0; y<yres; ++y) {
-						conv = true;
-						Complex z = xy2complex(x,y,xres,yres,scale);
+						samecount = 0;
+						z = xy2complex(x,y,(int)((double)xres*ratio),(int)((double)yres*ratio),scale);
 						z = z.minus(offset);
-						//z = z.plus(offset);
-						for (int k=0; k<maxiters; ++k) {
-							k1 = k;
+						k=0;
+						while(k<maxiters && z.abs()<2) {
+							++k;
+							z1 = z;
 							z = P(z, S, L, asubn);
-							if (z.abs()>2) {
-								conv = false;
+							if ((z1.minus(z).abs())<0.0001) ++samecount;
+							if (samecount==3) {
+								k=maxiters;
 							}
 						}
-						if (conv) {
-							//myColor = Color.getHSBColor((float)index/(float)segments,(float)0.6,(float)0.6);
-							col = startImage.getRGB( complex2x(offset, xres, scale), complex2y(offset, yres, scale));
-							//col = myColor.getRGB();
-							image.setRGB(x,y,col);
-						}
+						if (k>=maxiters) image.setRGB(x,y,col);
 					}
 				}
 			}
 			ImageIO.write(image, "png", new File("out/fractal.png"));
-			}
-			System.out.println("fractal - done");
-			// write fractal to file
-			//ImageIO.write(image, "png", new File("fractal.png"));
-			System.out.println("image output (fractal) - done");
+		}
+		System.out.println("fractal - done");
 	}
 }

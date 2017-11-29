@@ -6,6 +6,14 @@ Given an input image, this program breaks the image up into smaller components a
 ### How do I use it?
 Compile the .java files with javac, put a png in the in/ directory, and run Fractalize.class. This project was done in pure Java, so it has no weird dependencies.
 
+### To do:
+redo methods for better style/memory efficiency
+
+rewrite sobel to handle pixel data directly/pass info as pixel data instead of bufferedimage
+
+better realignment method
+
+
 ### Credits
 [Fekete polynomials and shapes of Julia sets](https://arxiv.org/abs/1607.05055)
 

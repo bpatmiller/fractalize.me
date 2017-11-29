@@ -1,4 +1,5 @@
 *.class
+*.db
 out/*
 in/*
 scratch/*

@@ -14,14 +14,14 @@ public class KMeans {
     public static void main(String[] args) { 
     } 
 
-    public BufferedImage run(String source, String dest, int k2, String m3) {
+    public BufferedImage run(BufferedImage source, String dest, int k2, String m3) {
       int mode = 1; 
       if (m3.equals("i")) { 
           mode = MODE_ITERATIVE; 
       } else if (m3.equals("c")) { 
           mode = MODE_CONTINUOUS; 
       } 
-      return calculate(loadImage(source),k2,mode);
+      return calculate(source,k2,mode);
     }
      
     public BufferedImage calculate(BufferedImage image,  
