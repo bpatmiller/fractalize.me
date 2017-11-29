@@ -3,6 +3,8 @@
 ### What is this?
 Given an input image, this program breaks the image up into smaller components and then calculates and renders a julia set that approximates each small component.
 
+## [Examples](https://drive.google.com/open?id=1uUPe0SEhWO_JWV8Nn8tcMeepV_d_Wxcp)
+
 ### How do I use it?
 Compile the .java files with javac, put a png in the in/ directory, and run Fractalize.class. This project was done in pure Java, so it has no weird dependencies.
 
