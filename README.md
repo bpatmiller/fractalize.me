@@ -5,15 +5,15 @@ Given an input image, this program breaks the image up into smaller components a
 
 ## [Examples](https://drive.google.com/open?id=1uUPe0SEhWO_JWV8Nn8tcMeepV_d_Wxcp)
 
-### How do I use it?
+### Setup
 Use `make` to build the source files.
 
 Use `make demo` to run an example.
 
-`Fractalize --scale scale --ratio ratio --maxiters maxiters --lejas lejas --colors colors --cutoff cutoff -i fname`
+### Usage
+`java Fractalize --scale scale --ratio ratio --maxiters maxiters --lejas lejas --colors colors --cutoff cutoff -i fname`
 
-By default, the input image is set to `in/in.png`.  Use `-i` to select an input image from `in/`.
-
+The default settings are `--scale 1.0 --ratio 1.0 --maxiters 16 --lejas 80 --colors 4 --cutoff 50 -i in.png`. Simply omit one to use its default value.
 
 ### To do:
 redo methods for better style/memory efficiency

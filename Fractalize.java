@@ -62,9 +62,8 @@ public class Fractalize {
 	// compute a_n
 	public static double an(List<Complex> lpts) {
 		double p = 1;
-		int ll = lpts.size();
-		Complex zn1 = lpts.get(ll-1);
-		for (int j=0; j<ll-1; ++j) {
+		Complex zn1 = lpts.get(lpts.size()-1);
+		for (int j=0; j<lpts.size()-1; ++j) {
 			p*=(zn1.minus(lpts.get(j))).abs();
 		}
 		return p;
@@ -327,9 +326,9 @@ public class Fractalize {
 		// variables for the program
 		double scale = 1.0;
 		double ratio = 1.0;
-		int maxiters = 12;
+		int maxiters = 16;
 		int lejas = 80;
-		int colors = 2;
+		int colors = 4;
 		int cutoff = 50;
 		String fname = "in.png";
 
@@ -352,16 +351,17 @@ public class Fractalize {
 		System.out.println("segments: "+ segments);
 
 		int col;
-		BufferedImage image;// = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);		
+		BufferedImage image;
 		// draw the group distribution
-		/*for (int x=0; x<startImage.getWidth(); ++x) {
+		image = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);		
+		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				col = new Color(0,0,0).getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
 				//col = layerColors2.get(groupConv[groups[x][y]-1]);
 				image.setRGB(x,y,col);
 			}
 		}
-		ImageIO.write(image, "png", new File("out/groups.png"));*/
+		ImageIO.write(image, "png", new File("out/groups.png"));
 
 		int xres = (int)(startImage.getWidth()*ratio);
 		int yres = (int)(startImage.getHeight()*ratio);		
@@ -377,7 +377,7 @@ public class Fractalize {
 		int samecount;
 		int k;
 
-		for (int index=1; index<segments; ++index) {
+		for (int index=0; index<segments; ++index) {
 			System.out.print(index + "||");
 			pixels = ((DataBufferByte) layersList.get(index).getRaster().getDataBuffer()).getData();
 			S = bytes2set(pixels, xres, yres, scale, cutoff);
@@ -389,7 +389,7 @@ public class Fractalize {
 				
 				// compute leja points
 				System.out.print("//computing leja pts:");
-				L = leja(S,lejas);
+				L = leja(S, Math.min(lejas, S.size()/2));
 				asubn = an(L);
 				System.out.println("//done w leja");
 				// set color

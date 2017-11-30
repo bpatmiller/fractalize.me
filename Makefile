@@ -27,4 +27,4 @@ clean:
 # Runs a demo
 demo: all
 	cp demo/demo.png in/in.png
-	java Fractalize
+	java Fractalize --colors 5
