@@ -3,6 +3,8 @@
 ### What is this?
 Given an input image, this program breaks the image up into smaller components and then calculates and renders a julia set that approximates each small component.
 
+## [Examples](https://drive.google.com/open?id=1uUPe0SEhWO_JWV8Nn8tcMeepV_d_Wxcp)
+
 ### How do I use it?
 Use `make` to build the source files.
 
