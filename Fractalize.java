@@ -5,6 +5,7 @@ import java.util.Stack;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
+import java.util.Scanner;
 
 import java.awt.Graphics;
 import java.awt.Image;
@@ -323,16 +324,27 @@ public class Fractalize {
 	}
 
 	public static void main( String[] args ) throws IOException {
-		// runtime variables for the program
-		final double scale = 1.0;
-		final double ratio = 1.0;
-		final int maxiters = 8;
-		final int lejas = 100;
-		final int colors = 4;
-		final int cutoff = 100;
+		// variables for the program
+		double scale = 1.0;
+		double ratio = 1.0;
+		int maxiters = 12;
+		int lejas = 80;
+		int colors = 2;
+		int cutoff = 50;
+		String fname = "in.png";
+
+		for (int k=0; k<args.length; ++k) {
+				 if (args[k].equals("--scale")) scale = Double.parseDouble(args[k+1]);
+			else if (args[k].equals("--ratio")) ratio = Double.parseDouble(args[k+1]);
+			else if (args[k].equals("--maxiters")) maxiters = Integer.parseInt(args[k+1]);
+			else if (args[k].equals("--lejas")) lejas = Integer.parseInt(args[k+1]);
+			else if (args[k].equals("--colors")) colors = Integer.parseInt(args[k+1]);
+			else if (args[k].equals("--cutoff")) cutoff = Integer.parseInt(args[k+1]);
+			else if (args[k].equals("-i")) fname = args[k+1];
+		}
 
 		// read/segment image
-	    startImage = ImageIO.read(new File("in/in.png"));
+	    startImage = ImageIO.read(new File("in/"+fname));
 		KMeans kmeans = new KMeans();
 		kImage = kmeans.run(startImage,"out.png",colors,"i");
 		ArrayList<BufferedImage> layersList = splitLayers(ratio, cutoff);
@@ -340,16 +352,16 @@ public class Fractalize {
 		System.out.println("segments: "+ segments);
 
 		int col;
-		BufferedImage image = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);		
+		BufferedImage image;// = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);		
 		// draw the group distribution
-		for (int x=0; x<startImage.getWidth(); ++x) {
+		/*for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				col = new Color(0,0,0).getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
 				//col = layerColors2.get(groupConv[groups[x][y]-1]);
 				image.setRGB(x,y,col);
 			}
 		}
-		ImageIO.write(image, "png", new File("out/groups.png"));
+		ImageIO.write(image, "png", new File("out/groups.png"));*/
 
 		int xres = (int)(startImage.getWidth()*ratio);
 		int yres = (int)(startImage.getHeight()*ratio);		
@@ -365,7 +377,7 @@ public class Fractalize {
 		int samecount;
 		int k;
 
-		for (int index=0; index<segments; ++index) {
+		for (int index=1; index<segments; ++index) {
 			System.out.print(index + "||");
 			pixels = ((DataBufferByte) layersList.get(index).getRaster().getDataBuffer()).getData();
 			S = bytes2set(pixels, xres, yres, scale, cutoff);
@@ -403,8 +415,8 @@ public class Fractalize {
 					}
 				}
 			}
-			ImageIO.write(image, "png", new File("out/fractal.png"));
 		}
+		ImageIO.write(image, "png", new File( "out/" + fname ));
 		System.out.println("fractal - done");
 	}
 }

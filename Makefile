@@ -26,5 +26,5 @@ clean:
 
 # Runs a demo
 demo: all
-	cp examples/teapot.png in/in.png
+	cp demo/demo.png in/in.png
 	java Fractalize

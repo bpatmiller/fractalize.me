@@ -1,5 +1,7 @@
 *.class
 *.db
+*.sh
 out/*
 in/*
+examples/*
 scratch/*
