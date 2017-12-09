@@ -3,6 +3,8 @@
 ### What is this?
 Given an input image, this program breaks the image up into smaller components and then calculates and renders a julia set that approximates each small component.
 
+Based off of the information found in [Shapes of Polynomial Julia Sets](https://arxiv.org/find/math/1/au:+Lindsey_K/0/1/0/all/0/1) and [Fekete polynomials and shapes of Julia sets](https://arxiv.org/abs/1607.05055).
+
 ## [Examples](https://drive.google.com/open?id=1uUPe0SEhWO_JWV8Nn8tcMeepV_d_Wxcp)
 
 ### Setup
