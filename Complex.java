@@ -49,7 +49,7 @@ public class Complex {
 
     // return abs/modulus/magnitude
     public double abs() {
-        return Math.hypot(re, im);
+        return Math.sqrt(re*re + im*im);
     }
 
     // return angle/phase/argument, normalized to be between -pi and pi
