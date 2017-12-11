@@ -24,15 +24,17 @@ public class Fractalize {
 
 	// calculates PI(z-z_j)
 	public static double piz( List<Complex> lpts, ArrayList<Complex> S, int s) {
-		int ll = lpts.size();
-		if (ll==0) {
-			return (S.get(s)).abs();
-		} else if (ll==1) {
-			return ((S.get(s)).minus(lpts.get(0))).abs();
-		}
-		double k = (((S.get(s)).minus(lpts.get(ll-1))).abs());
-		lpts.remove(ll-1);
-		return ( k * (piz(lpts, S,s)));
+		Complex c = S.get(s);
+
+		if (lpts.size() == 0)
+			return c.abs();
+
+		//compute product
+		double k = 1;
+		for (Complex a : lpts)
+			k *= c.minus(a).abs();
+
+		return k;
 	}
 
 	// generate n leja points given a set S
