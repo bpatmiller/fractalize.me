@@ -2,6 +2,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Stack;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +16,7 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.awt.Color;
+import java.awt.Graphics2D;
 
 public class Fractalize {
 
@@ -275,7 +280,7 @@ public class Fractalize {
 				}
 			}
 		}
-		System.out.println("done making seperate image layers");
+		System.out.println("done making separate image layers");
 		
 		for (int i=0; i<layers.size(); ++i) {
 			layers.set(i, sobel(layers.get(i)));
@@ -324,14 +329,16 @@ public class Fractalize {
 		}
 	}
 
+	public static int threadCount = Runtime.getRuntime().availableProcessors();
+	public static int lejas = 80;
+	public static int cutoff = 50;
+	public static double scale = 1.0;
+	public static double ratio = 1.0;
+	public static int maxiters = 16;
+	public static int xres, yres;
 	public static void main(String[] args) throws IOException {
 		// variables for the program
-		double scale = 1.0;
-		double ratio = 1.0;
-		int maxiters = 16;
-		int lejas = 80;
 		int colors = 4;
-		int cutoff = 50;
 		String fname = "in.png";
 
 		for (int k=0; k<args.length; ++k) {
@@ -365,60 +372,48 @@ public class Fractalize {
 		}
 		ImageIO.write(image, "png", new File("out/groups.png"));
 
-		int xres = (int)(startImage.getWidth()*ratio);
-		int yres = (int)(startImage.getHeight()*ratio);		
-		image = new BufferedImage(xres, yres, BufferedImage.TYPE_4BYTE_ABGR);
+		//compute resolution
+		xres = (int)(startImage.getWidth()*ratio);
+		yres = (int)(startImage.getHeight()*ratio);
 
-		byte[] pixels;
-		List<Complex> S;
-		List<Complex> L;
-		double asubn;
-		Complex offset;
-		Complex z;
-		Complex z1;
-		int samecount;
-		int k;
+		//create thread pool
+		ExecutorService service = Executors.newFixedThreadPool(threadCount);
+		System.out.printf("Running with %d threads.\n", threadCount);
 
+		//create jobs for threads
+		List<FractalizeCallable> jobs = new ArrayList<>();
 		for (int index=0; index<segments; ++index) {
-			System.out.print(index + "||");
-			pixels = ((DataBufferByte) layersList.get(index).getRaster().getDataBuffer()).getData();
-			S = bytes2set(pixels, xres, yres, scale, cutoff);
-			if(S!=null) {
-				System.out.print("set size: "+S.size());
-				// recenter S (important for mathematical purposes)
-				offset = norm(S).scale(scale);
-				normalize(S,offset);
-				
-				// compute leja points
-				System.out.print("//computing leja pts:");
-				L = leja(S, Math.min(lejas, S.size()/2));
-				asubn = an(L);
-				System.out.println("//done w leja");
-				// set color
-				col = layerColors2.get(index);
-
-				// iterate pixel by pixel
-				for (int x=0; x<xres; ++x) {
-					for(int y=0; y<yres; ++y) {
-						samecount = 0;
-						z = xy2complex(x,y,(int)((double)xres*ratio),(int)((double)yres*ratio),scale);
-						z = z.minus(offset);
-						k=0;
-						while(k<maxiters && z.abs()<2) {
-							++k;
-							z1 = z;
-							z = P(z, S, L, asubn);
-							if ((z1.minus(z).abs())<0.0001) ++samecount;
-							if (samecount==3) {
-								k=maxiters;
-							}
-						}
-						if (k>=maxiters) image.setRGB(x,y,col);
-					}
-				}
-			}
+			jobs.add(new FractalizeCallable(
+				index,
+				layersList.get(index),
+				layerColors2.get(index)
+			));
 		}
-		ImageIO.write(image, "png", new File( "out/" + fname ));
-		System.out.println("fractal - done");
+
+		try {
+			//collect output images
+			List<Future<BufferedImage>> results = service.invokeAll(jobs);
+
+			//composite output images
+			Graphics2D gfx = image.createGraphics();
+			gfx.clearRect(0, 0, image.getWidth(), image.getHeight());
+			for (Future<BufferedImage> fimg : results) {
+				gfx.drawImage(fimg.get(), null, null);
+			}
+
+			ImageIO.write(image, "png", new File( "out/" + fname ));
+			System.out.println("fractal - done");
+		}
+		catch (InterruptedException e) {
+			System.out.println("Execution interrupted.");
+			e.printStackTrace();
+		}
+		catch (ExecutionException e) {
+			System.out.println("Execution failed.");
+			e.printStackTrace();
+		}
+		finally {
+			service.shutdown();
+		}
 	}
 }
