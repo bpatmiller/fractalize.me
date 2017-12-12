@@ -15,6 +15,9 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
+import java.awt.image.DataBufferInt;
+import java.awt.image.Raster;
+import java.awt.image.WritableRaster;
 import java.awt.Color;
 import java.awt.Graphics2D;
 
@@ -116,74 +119,98 @@ public class Fractalize {
         return gray;
     }
 
-    // sobel edge detection
+    //sobel edge detection
     public static BufferedImage sobel(BufferedImage image) {
-        int x = image.getWidth();
-        int y = image.getHeight();
+    	int w = image.getWidth();
+    	int h = image.getHeight();
 
-        int maxGval = 0;
-        int[][] edgeColors = new int[x][y];
-        int maxGradient = -1;
+    	//convert input to INT_ARGB
+    	BufferedImage input = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+    	Graphics2D igfx = input.createGraphics();
+    	igfx.drawImage(image, null, null);
+    	igfx.dispose();
 
-        for (int i = 1; i < x - 1; i++) {
-            for (int j = 1; j < y - 1; j++) {
+		BufferedImage output = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+		
+		//create input buffer
+		Raster rSrc = input.getRaster();
+		DataBufferInt dSrc = (DataBufferInt)rSrc.getDataBuffer();
+		int[] src = dSrc.getData();
 
-                int val00 = getGrayScale(image.getRGB(i - 1, j - 1));
-                int val01 = getGrayScale(image.getRGB(i - 1, j));
-                int val02 = getGrayScale(image.getRGB(i - 1, j + 1));
+		//create output buffer
+		WritableRaster rDst = output.getRaster();
+		DataBufferInt dDst = (DataBufferInt)rDst.getDataBuffer();
+		int[] dst = dDst.getData();
 
-                int val10 = getGrayScale(image.getRGB(i, j - 1));
-                int val11 = getGrayScale(image.getRGB(i, j));
-                int val12 = getGrayScale(image.getRGB(i, j + 1));
+		//apply sobel operator
+    	int maxGval = 0;
+    	int[][] edgeColors = new int[w][h];
+    	int maxGradient = -1;
 
-                int val20 = getGrayScale(image.getRGB(i + 1, j - 1));
-                int val21 = getGrayScale(image.getRGB(i + 1, j));
-                int val22 = getGrayScale(image.getRGB(i + 1, j + 1));
+    	int[][] srcMat = {{0,0,0}, {0,0,0}, {0,0,0}};
 
-                int gx =  ((-1 * val00) + (0 * val01) + (1 * val02)) 
-                        + ((-2 * val10) + (0 * val11) + (2 * val12))
-                        + ((-1 * val20) + (0 * val21) + (1 * val22));
+    	for (int x=1; x<w-1; ++x) {
+    		for (int y=1; y<h-1; ++y) {
+    			//sample input image
+    			srcMat[0][0] = getGrayScale(src[(y-1)*w+(x-1)]);
+    			srcMat[0][1] = getGrayScale(src[(y  )*w+(x-1)]);
+    			srcMat[0][2] = getGrayScale(src[(y+1)*w+(x-1)]);
 
-                int gy =  ((-1 * val00) + (-2 * val01) + (-1 * val02))
-                        + ((0 * val10) + (0 * val11) + (0 * val12))
-                        + ((1 * val20) + (2 * val21) + (1 * val22));
+    			srcMat[1][0] = getGrayScale(src[(y-1)*w+(x  )]);
+    			srcMat[1][1] = getGrayScale(src[(y  )*w+(x  )]);
+    			srcMat[1][2] = getGrayScale(src[(y+1)*w+(x  )]);
+
+    			srcMat[2][0] = getGrayScale(src[(y-1)*w+(x+1)]);
+    			srcMat[2][1] = getGrayScale(src[(y  )*w+(x+1)]);
+    			srcMat[2][2] = getGrayScale(src[(y+1)*w+(x+1)]);
+
+    			//compute gradient
+    			int gx =  ((-1 * srcMat[0][0]) + ( 0 * srcMat[0][1]) + ( 1 * srcMat[0][2])) 
+                        + ((-2 * srcMat[1][0]) + ( 0 * srcMat[1][1]) + ( 2 * srcMat[1][2]))
+                        + ((-1 * srcMat[2][0]) + ( 0 * srcMat[2][1]) + ( 1 * srcMat[2][2]));
+
+                int gy =  ((-1 * srcMat[0][0]) + (-2 * srcMat[0][1]) + (-1 * srcMat[0][2]))
+                        + (( 0 * srcMat[1][0]) + ( 0 * srcMat[1][1]) + ( 0 * srcMat[1][2]))
+                        + (( 1 * srcMat[2][0]) + ( 2 * srcMat[2][1]) + ( 1 * srcMat[2][2]));
 
                 double gval = Math.sqrt((gx * gx) + (gy * gy));
                 int g = (int) gval;
 
-                if(maxGradient < g) {
+                if(maxGradient < g)
                     maxGradient = g;
-                }
 
-                edgeColors[i][j] = g;
-            }
-        }
+                edgeColors[x][y] = g;
+    		}
+    	}
 
-        double scale = 255.0 / maxGradient;
+    	double scale = 255.0 / maxGradient;
 
-        for (int i = 1; i < x - 1; i++) {
-            for (int j = 1; j < y - 1; j++) {
-                int edgeColor = edgeColors[i][j];
+    	//render output image
+        for (int x=1; x<w-1; ++x) {
+            for (int y=1; y<h-1; ++y) {
+                int edgeColor = edgeColors[x][y];
                 edgeColor = (int)(edgeColor * scale);
                 edgeColor = 0xff000000 | (edgeColor << 16) | (edgeColor << 8) | edgeColor;
 
-                image.setRGB(i, j, edgeColor);
+                dst[y*w+x] = edgeColor;
             }
         }
 
+        //clear edge pixels
 		int black = (new Color(0,0,0)).getRGB();
-        for (int i=0; i<image.getWidth(); i+=image.getWidth()-1) {
-        	for (int j=0; j<image.getHeight(); ++j) {
-        		image.setRGB(i,j,black);
-        	}
-        }
-		for (int i=0; i<image.getHeight(); i+=image.getHeight()-1) {
-        	for (int j=0; j<image.getWidth(); ++j) {
-        		image.setRGB(j,i,black);
-        	}
-        }
+		for (int x=0; x<w; ++x) {
+			dst[x] = black;
+			dst[(h-1)*w+x] = black;
+		}
+		for (int y=0; y<h; ++y) {
+			dst[y*w] = black;
+			dst[y*w + w-1] = black;
+		}
 
-        return image;
+		Graphics2D gfx = image.createGraphics();
+        gfx.drawImage(output, null, null);
+        gfx.dispose();
+    	return image;
     }
 
 	public static void expand(int x, int y, int sub){
