@@ -2,6 +2,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Arrays;
 import java.util.Stack;
+import java.util.Queue;
+import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -408,7 +410,7 @@ public class Fractalize {
 		System.out.printf("Running with %d threads.\n", threadCount);
 
 		//create jobs for threads
-		List<FractalizeCallable> jobs = new ArrayList<>();
+		Queue<FractalizeCallable> jobs = new LinkedList<>();
 		for (int index=0; index<segments; ++index) {
 			jobs.add(new FractalizeCallable(
 				index,
@@ -417,15 +419,25 @@ public class Fractalize {
 			));
 		}
 
-		try {
-			//collect output images
-			List<Future<BufferedImage>> results = service.invokeAll(jobs);
+		final int batchSize = threadCount;
+		
+		//prepare graphics
+		Graphics2D gfx = image.createGraphics();
+		gfx.clearRect(0, 0, image.getWidth(), image.getHeight());
 
-			//composite output images
-			Graphics2D gfx = image.createGraphics();
-			gfx.clearRect(0, 0, image.getWidth(), image.getHeight());
-			for (Future<BufferedImage> fimg : results) {
-				gfx.drawImage(fimg.get(), null, null);
+		try {
+			while (!jobs.isEmpty()) {
+				//construct a batch of jobs
+				Queue<FractalizeCallable> batch = new LinkedList<>();
+				for (int i=0; i<batchSize && !jobs.isEmpty(); ++i)
+					batch.add(jobs.poll());
+
+				//collect output images
+				List<Future<BufferedImage>> results = service.invokeAll(batch);
+
+				//composite output images
+				for (Future<BufferedImage> fimg : results)
+					gfx.drawImage(fimg.get(), null, null);
 			}
 
 			ImageIO.write(image, "png", new File( "out/" + fname ));
@@ -441,6 +453,7 @@ public class Fractalize {
 		}
 		finally {
 			service.shutdown();
+			gfx.dispose();
 		}
 	}
 }
