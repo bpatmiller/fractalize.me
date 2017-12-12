@@ -385,23 +385,23 @@ public class Fractalize {
 		List<BufferedImage> layersList = splitLayers(ratio, cutoff);
 		int segments=layersList.size();
 		System.out.println("segments: "+ segments);
-
-		int col;
-		BufferedImage image;
+						
 		// draw the group distribution
-		image = new BufferedImage(startImage.getWidth(), startImage.getHeight(), BufferedImage.TYPE_3BYTE_BGR);		
+		BufferedImage groupsImg = new BufferedImage(startImage.getWidth(), startImage.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+		int col;
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				col = Color.getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
 				//col = layerColors2.get(groupConv[groups[x][y]-1]);
-				image.setRGB(x,y,col);
+				groupsImg.setRGB(x,y,col);
 			}
 		}
-		ImageIO.write(image, "png", new File("out/groups.png"));
+		ImageIO.write(groupsImg, "png", new File("out/groups.png"));
 
 		//compute resolution
 		xres = (int)(startImage.getWidth()*ratio);
 		yres = (int)(startImage.getHeight()*ratio);
+		BufferedImage image = new BufferedImage(xres, yres, BufferedImage.TYPE_3BYTE_BGR);
 
 		//create thread pool
 		ExecutorService service = Executors.newFixedThreadPool(threadCount);
