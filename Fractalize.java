@@ -19,11 +19,11 @@ public class Fractalize {
 	public static BufferedImage kImage;
 	public static int[][] groups;
 	public static int[] groupConv;
-	public static ArrayList<int[]> layerColors = new ArrayList<int[]>();
-	public static ArrayList<Integer> layerColors2;
+	public static List<int[]> layerColors = new ArrayList<>();
+	public static List<Integer> layerColors2;
 
 	// calculates PI(z-z_j)
-	public static double piz( List<Complex> lpts, ArrayList<Complex> S, int s) {
+	public static double piz(List<Complex> lpts, List<Complex> S, int s) {
 		Complex c = S.get(s);
 
 		if (lpts.size() == 0)
@@ -38,16 +38,16 @@ public class Fractalize {
 	}
 
 	// generate n leja points given a set S
-	public static List<Complex> leja( ArrayList<Complex> S, int n) {
+	public static List<Complex> leja(List<Complex> S, int n) {
 		if (n>S.size()/2) n = S.size()/2;
 		int sl = S.size();
-		List<Complex> lpts = new ArrayList<Complex>(n);
+		List<Complex> lpts = new ArrayList<>(n);
 		for (int j=0; j<n; ++j) {
 			double max = 0;
 			int smax = 0;
 			double curr = 0;
 			for (int s=0; s<sl; ++s) {
-				List<Complex> dummylpts = new ArrayList(lpts);
+				List<Complex> dummylpts = new ArrayList<>(lpts);
 				curr = piz(dummylpts, S, s);
 				if (curr > max) {
 					max = curr;
@@ -72,7 +72,7 @@ public class Fractalize {
 	}
 
 	// compute P(z)
-	public static Complex P(Complex z, ArrayList<Complex> E, List<Complex> lpts, double asubn) {
+	public static Complex P(Complex z, List<Complex> E, List<Complex> lpts, double asubn) {
 		double n = (double)lpts.size();
 		double s = 1/n;
 		Complex p = z.minus(lpts.get(0));
@@ -227,7 +227,7 @@ public class Fractalize {
 		}
 	}
 
-	public static ArrayList<BufferedImage> splitLayers(double ratio, int cutoff) {
+	public static List<BufferedImage> splitLayers(double ratio, int cutoff) {
 		groups = new int[startImage.getWidth()][startImage.getHeight()];
 		int count = 0;
 
@@ -256,8 +256,8 @@ public class Fractalize {
 		}
 
 		// add only valid groups
-		ArrayList<BufferedImage> layers = new ArrayList<BufferedImage>();
-		layerColors2 = new ArrayList<Integer>();
+		List<BufferedImage> layers = new ArrayList<>();
+		layerColors2 = new ArrayList<>();
 		for (int i=0; i<count; ++i) {
 			if (groupSizes[i]>=cutoff) {
 				layers.add(new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR));
@@ -284,8 +284,8 @@ public class Fractalize {
 		return layers;
 	}
 
-	public static ArrayList<Complex> bytes2set(byte[] pixels, int xres, int yres,double scale, int cutoff) {
-		ArrayList S = new ArrayList();
+	public static List<Complex> bytes2set(byte[] pixels, int xres, int yres,double scale, int cutoff) {
+		List<Complex> S = new ArrayList<>();
 		int step;
 		if (pixels.length/(xres*yres)==3) {
 		for (int i=0; i<pixels.length; i+=3) {
@@ -306,7 +306,7 @@ public class Fractalize {
 		return null;
 	}
 
-	public static Complex norm(ArrayList<Complex> S) {
+	public static Complex norm(List<Complex> S) {
 		double x=0;
 		double y=0;
 		for (int i=0; i<S.size(); ++i) {
@@ -318,13 +318,13 @@ public class Fractalize {
 		return new Complex(x,y);
 	}
 
-	public static void normalize(ArrayList<Complex> S, Complex z) {
+	public static void normalize(List<Complex> S, Complex z) {
 		for (int i=0; i<S.size(); ++i) {
 			S.set(i, S.get(i).minus(z));
 		}
 	}
 
-	public static void main( String[] args ) throws IOException {
+	public static void main(String[] args) throws IOException {
 		// variables for the program
 		double scale = 1.0;
 		double ratio = 1.0;
@@ -348,17 +348,17 @@ public class Fractalize {
 	    startImage = ImageIO.read(new File("in/"+fname));
 		KMeans kmeans = new KMeans();
 		kImage = kmeans.run(startImage,"out.png",colors,"i");
-		ArrayList<BufferedImage> layersList = splitLayers(ratio, cutoff);
+		List<BufferedImage> layersList = splitLayers(ratio, cutoff);
 		int segments=layersList.size();
 		System.out.println("segments: "+ segments);
 
 		int col;
 		BufferedImage image;
 		// draw the group distribution
-		image = new BufferedImage((int)(startImage.getWidth()),(int)(startImage.getHeight()), BufferedImage.TYPE_3BYTE_BGR);		
+		image = new BufferedImage(startImage.getWidth(), startImage.getHeight(), BufferedImage.TYPE_3BYTE_BGR);		
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
-				col = new Color(0,0,0).getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
+				col = Color.getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
 				//col = layerColors2.get(groupConv[groups[x][y]-1]);
 				image.setRGB(x,y,col);
 			}
@@ -370,7 +370,7 @@ public class Fractalize {
 		image = new BufferedImage(xres, yres, BufferedImage.TYPE_4BYTE_ABGR);
 
 		byte[] pixels;
-		ArrayList<Complex> S;
+		List<Complex> S;
 		List<Complex> L;
 		double asubn;
 		Complex offset;
