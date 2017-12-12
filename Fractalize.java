@@ -85,11 +85,26 @@ public class Fractalize {
 	public static Complex P(Complex z, List<Complex> E, List<Complex> lpts, double asubn) {
 		double n = (double)lpts.size();
 		double s = 1/n;
-		Complex p = z.minus(lpts.get(0));
+
+		double zRe = z.re(), zIm = z.im();
+		double pRe = zRe - lpts.get(0).re(), pIm = zIm - lpts.get(0).im();
+		double pRe2, pIm2;
+
 		for (int j=1; j<n; ++j) {
-			p = p.times(z.minus(lpts.get(j)));
+			double re = zRe - lpts.get(j).re();
+			double im = zIm - lpts.get(j).im();
+			pRe2 = pRe * re - pIm * im;
+			pIm2 = pRe * im + pIm * re;
+			pRe = pRe2;
+			pIm = pIm2;
 		}
-		return (p.times(z)).scale(Math.exp(0.5)/asubn);
+		
+		double scale = Math.exp(0.5) / asubn;
+		pRe2 = (pRe * zRe - pIm * zIm) * scale;
+		pIm2 = (pRe * zIm + pIm * zRe) * scale;
+		pRe = pRe2;
+		pIm = pIm2;
+		return new Complex(pRe, pIm);
 	}
 
 	// translate x,y coordinates to a complex number
