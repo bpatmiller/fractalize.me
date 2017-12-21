@@ -26,22 +26,22 @@ public class FractalizeCallable implements Callable<BufferedImage> {
 
 		BufferedImage output = new BufferedImage(Fractalize.xres, Fractalize.yres, BufferedImage.TYPE_4BYTE_ABGR);
 
-		System.out.print(this.index + "||");
+		// System.out.print(this.index + "||");
 		pixels = ((DataBufferByte) this.layer.getRaster().getDataBuffer()).getData();
 		S = Fractalize.bytes2set(pixels, Fractalize.xres, Fractalize.yres, Fractalize.scale, Fractalize.cutoff);
 		
 		if (S!=null) {
-			System.out.print("set size: "+S.size());
+			// System.out.print("set size: "+S.size());
 			
 			// recenter S (important for mathematical purposes)
 			offset = Fractalize.norm(S).scale(Fractalize.scale);
 			Fractalize.normalize(S,offset);
 			
 			// compute leja points
-			System.out.print("//computing leja pts:");
+			// System.out.print("//computing leja pts:");
 			L = Fractalize.leja(S, Math.min(Fractalize.lejas, S.size()/2));
 			a_n = Fractalize.an(L);
-			System.out.println("//done w leja");
+			// System.out.print("//done w leja");
 
 			// iterate pixel by pixel
 			for (int x=0; x<Fractalize.xres; ++x) {

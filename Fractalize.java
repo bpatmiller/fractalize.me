@@ -440,6 +440,9 @@ public class Fractalize {
 		Graphics2D gfx = image.createGraphics();
 		gfx.clearRect(0, 0, image.getWidth(), image.getHeight());
 
+		int jobsCompleted = 0;
+		ANSI.Progress progress = new ANSI.Progress(32, jobs.size());
+		
 		try {
 			while (!jobs.isEmpty()) {
 				//construct a batch of jobs
@@ -449,11 +452,17 @@ public class Fractalize {
 
 				//collect output images
 				List<Future<BufferedImage>> results = service.invokeAll(batch);
+				
+				//update progress bar
+				jobsCompleted += batchSize;
+				progress.updateValue(jobsCompleted);
 
 				//composite output images
 				for (Future<BufferedImage> fimg : results)
 					gfx.drawImage(fimg.get(), null, null);
 			}
+
+			ANSI.clearLine();
 
 			ImageIO.write(image, "png", new File( "out/" + fname ));
 			System.out.println("fractal - done");
