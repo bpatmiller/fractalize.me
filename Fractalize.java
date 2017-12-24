@@ -34,15 +34,13 @@ public class Fractalize {
 
 	// calculates PI(z-z_j)
 	public static double piz(List<Complex> lpts, List<Complex> S, int s) {
-		Complex c = S.get(s);
-
 		if (lpts.size() == 0)
-			return c.abs();
+			return S.get(s).abs();
 
 		//compute product
 		double k = 1;
 		for (Complex a : lpts)
-			k *= c.minus(a).abs();
+			k *= S.get(s).minus(a).abs();
 
 		return k;
 	}
@@ -57,8 +55,7 @@ public class Fractalize {
 			int smax = 0;
 			double curr = 0;
 			for (int s=0; s<sl; ++s) {
-				List<Complex> dummylpts = new ArrayList<>(lpts);
-				curr = piz(dummylpts, S, s);
+				curr = piz(lpts, S, s);
 				if (curr > max) {
 					max = curr;
 					smax = s;
@@ -74,9 +71,8 @@ public class Fractalize {
 	// compute a_n
 	public static double an(List<Complex> lpts) {
 		double p = 1;
-		Complex zn1 = lpts.get(lpts.size()-1);
 		for (int j=0; j<lpts.size()-1; ++j) {
-			p*=(zn1.minus(lpts.get(j))).abs();
+			p*=(lpts.get(lpts.size()-1).minus(lpts.get(j))).abs();
 		}
 		return p;
 	}
