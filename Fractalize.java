@@ -32,12 +32,9 @@ public class Fractalize {
 	public static List<Color> layerColors = new ArrayList<>();
 	public static List<Integer> layerColors2;
 
-	// calculates PI(z-z_j)
 	public static double piz(List<Complex> lpts, List<Complex> S, int s) {
 		if (lpts.size() == 0)
 			return S.get(s).abs();
-
-		//compute product
 		double k = 1;
 		for (Complex a : lpts)
 			k *= S.get(s).minus(a).abs();
@@ -45,7 +42,6 @@ public class Fractalize {
 		return k;
 	}
 
-	// generate n leja points given a set S
 	public static List<Complex> leja(List<Complex> S, int n) {
 		if (n>S.size()/2) n = S.size()/2;
 		int sl = S.size();
@@ -68,7 +64,6 @@ public class Fractalize {
 		return lpts;
 	}
 
-	// compute a_n
 	public static double an(List<Complex> lpts) {
 		double p = 1;
 		for (int j=0; j<lpts.size()-1; ++j) {
@@ -77,7 +72,6 @@ public class Fractalize {
 		return p;
 	}
 
-	// compute P(z)
 	public static Complex P(Complex z, List<Complex> E, List<Complex> lpts, double asubn) {
 		double n = (double)lpts.size();
 		double s = 1/n;
@@ -107,109 +101,7 @@ public class Fractalize {
 	public static Complex xy2complex(int x, int y, int xres, int yres, double scale) {
 		return new Complex(scale*(((double)x/(double)xres)-0.5), scale*(((double)y/(double)yres)-0.5));
 	}
-
-    public static int getGrayScale(int rgb) {
-        int r = (rgb >> 16) & 0xff;
-        int g = (rgb >> 8) & 0xff;
-        int b = (rgb) & 0xff;
-        int gray = (int)(0.2126 * r + 0.7152 * g + 0.0722 * b);
-        return gray;
-    }
-
-    //sobel edge detection
-    public static BufferedImage sobel(BufferedImage image) {
-    	int w = image.getWidth();
-    	int h = image.getHeight();
-
-    	//convert input to INT_ARGB
-    	BufferedImage input = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-    	Graphics2D igfx = input.createGraphics();
-    	igfx.drawImage(image, null, null);
-    	igfx.dispose();
-
-		BufferedImage output = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-		
-		//create input buffer
-		Raster rSrc = input.getRaster();
-		DataBufferInt dSrc = (DataBufferInt)rSrc.getDataBuffer();
-		int[] src = dSrc.getData();
-
-		//create output buffer
-		WritableRaster rDst = output.getRaster();
-		DataBufferInt dDst = (DataBufferInt)rDst.getDataBuffer();
-		int[] dst = dDst.getData();
-
-		//apply sobel operator
-    	int maxGval = 0;
-    	int[][] edgeColors = new int[w][h];
-    	int maxGradient = -1;
-
-    	int[][] srcMat = {{0,0,0}, {0,0,0}, {0,0,0}};
-
-    	for (int x=1; x<w-1; ++x) {
-    		for (int y=1; y<h-1; ++y) {
-    			//sample input image
-    			srcMat[0][0] = getGrayScale(src[(y-1)*w+(x-1)]);
-    			srcMat[0][1] = getGrayScale(src[(y  )*w+(x-1)]);
-    			srcMat[0][2] = getGrayScale(src[(y+1)*w+(x-1)]);
-
-    			srcMat[1][0] = getGrayScale(src[(y-1)*w+(x  )]);
-    			srcMat[1][1] = getGrayScale(src[(y  )*w+(x  )]);
-    			srcMat[1][2] = getGrayScale(src[(y+1)*w+(x  )]);
-
-    			srcMat[2][0] = getGrayScale(src[(y-1)*w+(x+1)]);
-    			srcMat[2][1] = getGrayScale(src[(y  )*w+(x+1)]);
-    			srcMat[2][2] = getGrayScale(src[(y+1)*w+(x+1)]);
-
-    			//compute gradient
-    			int gx =  ((-1 * srcMat[0][0]) + ( 0 * srcMat[0][1]) + ( 1 * srcMat[0][2])) 
-                        + ((-2 * srcMat[1][0]) + ( 0 * srcMat[1][1]) + ( 2 * srcMat[1][2]))
-                        + ((-1 * srcMat[2][0]) + ( 0 * srcMat[2][1]) + ( 1 * srcMat[2][2]));
-
-                int gy =  ((-1 * srcMat[0][0]) + (-2 * srcMat[0][1]) + (-1 * srcMat[0][2]))
-                        + (( 0 * srcMat[1][0]) + ( 0 * srcMat[1][1]) + ( 0 * srcMat[1][2]))
-                        + (( 1 * srcMat[2][0]) + ( 2 * srcMat[2][1]) + ( 1 * srcMat[2][2]));
-
-                double gval = Math.sqrt((gx * gx) + (gy * gy));
-                int g = (int) gval;
-
-                if(maxGradient < g)
-                    maxGradient = g;
-
-                edgeColors[x][y] = g;
-    		}
-    	}
-
-    	double scale = 255.0 / maxGradient;
-
-    	//render output image
-        for (int x=1; x<w-1; ++x) {
-            for (int y=1; y<h-1; ++y) {
-                int edgeColor = edgeColors[x][y];
-                edgeColor = (int)(edgeColor * scale);
-                edgeColor = 0xff000000 | (edgeColor << 16) | (edgeColor << 8) | edgeColor;
-
-                dst[y*w+x] = edgeColor;
-            }
-        }
-
-        //clear edge pixels
-		int black = (new Color(0,0,0)).getRGB();
-		for (int x=0; x<w; ++x) {
-			dst[x] = black;
-			dst[(h-1)*w+x] = black;
-		}
-		for (int y=0; y<h; ++y) {
-			dst[y*w] = black;
-			dst[y*w + w-1] = black;
-		}
-
-		Graphics2D gfx = image.createGraphics();
-        gfx.drawImage(output, null, null);
-        gfx.dispose();
-    	return image;
-    }
-
+  
 	public static void expand(int x, int y, int sub){
 		int ct = 0;
 		int col;
@@ -265,7 +157,7 @@ public class Fractalize {
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				if (groups[x][y]==0) {
-						//System.out.println("new gp" + x + "," + y);
+
 						++count;
 						expand(x,y,-1);
 						replaceGroups(-1,count);
@@ -306,10 +198,9 @@ public class Fractalize {
 			}
 		}
 		System.out.println("done making separate image layers");
-		
-		for (int i=0; i<layers.size(); ++i) {
-			layers.set(i, sobel(layers.get(i)));
-		}
+
+		// reimplement sobel later
+
 		System.out.println("done applying sobel operator");
 		return layers;
 	}
