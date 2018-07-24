@@ -24,13 +24,17 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 
 public class Fractalize {
-
 	public static BufferedImage startImage;
 	public static BufferedImage kImage;
-	public static int[][] groups;
-	public static int[] groupConv;
-	public static List<Color> layerColors = new ArrayList<>();
-	public static List<Integer> layerColors2;
+	public static PixelGrid pixelGrid;
+
+	public static int threadCount = Runtime.getRuntime().availableProcessors();
+	public static int lejas = 80;
+	public static int cutoff = 50;
+	public static double scale = 1.0;
+	public static int maxiters = 16;
+	public static int xres, yres;
+
 
 	public static double piz(List<Complex> lpts, List<Complex> S, int s) {
 		if (lpts.size() == 0)
@@ -42,10 +46,10 @@ public class Fractalize {
 		return k;
 	}
 
-	public static List<Complex> leja(List<Complex> S, int n) {
+	public static ArrayList<Complex> leja(ArrayList<Complex> S, int n) {
 		if (n>S.size()/2) n = S.size()/2;
 		int sl = S.size();
-		List<Complex> lpts = new ArrayList<>(n);
+		ArrayList<Complex> lpts = new ArrayList<>(n);
 		for (int j=0; j<n; ++j) {
 			double max = 0;
 			int smax = 0;
@@ -97,134 +101,86 @@ public class Fractalize {
 		return new Complex(pRe, pIm);
 	}
 
-	// translate x,y coordinates to a complex number
 	public static Complex xy2complex(int x, int y, int xres, int yres, double scale) {
 		return new Complex(scale*(((double)x/(double)xres)-0.5), scale*(((double)y/(double)yres)-0.5));
 	}
   
-	public static void expand(int x, int y, int sub){
-		int ct = 0;
+
+  	public static boolean colorsMatch(int x, int y, int i, int j) {
+  		return ( kImage.getRGB(x,y) == kImage.getRGB(i,j) );
+  	}
+
+	public static int expand(int x, int y, int group){
+		int count = 0;
 		int col;
 		int red=0, green=0, blue=0;
-		Stack<int[]> yeet = new Stack<int[]>();
-		yeet.push(new int[]{x, y, sub});
+		Stack<int[]> pixelStack = new Stack<int[]>();
+		pixelStack.push(new int[]{x, y});
 		int[] curr = null;
 
-		while (!yeet.isEmpty()){
-			curr = yeet.pop();
-			// color stuff
-			++ct;
-			col = startImage.getRGB(curr[0],curr[1]);
+		while (!pixelStack.isEmpty()){
+			curr = pixelStack.pop();
+			int i = curr[0];
+			int j = curr[1];
+			count++;
+
+			col = startImage.getRGB(i,j);
 			red = ((col >> 16) & 0xFF) + red;
 			green = ((col >> 8) & 0xFF) + green;
 			blue = (col & 0xFF) + blue;
-			// end color stuff
-			groups[curr[0]][curr[1]] = sub;
 
-			if ( followable(curr[0]-1,curr[1],sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0]-1,curr[1]) ) yeet.push(new int[]{curr[0]-1, curr[1], sub});	
-			if ( followable(curr[0]+1,curr[1],sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0]+1,curr[1]) ) yeet.push(new int[]{curr[0]+1, curr[1], sub});	
-			if ( followable(curr[0],curr[1]-1,sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0],curr[1]-1) ) yeet.push(new int[]{curr[0], curr[1]-1, sub});	
-			if ( followable(curr[0],curr[1]+1,sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0],curr[1]+1) ) yeet.push(new int[]{curr[0], curr[1]+1, sub});
-		}
-		blue/=ct;
-		green/=ct;
-		red/=ct;
-		// color stuff
-		layerColors.add(new Color(red, green, blue));
-		// end color stuff
-	}
+			pixelGrid.setVisited(i,j);
+			pixelGrid.setPixelGroup(i, j, group);
 
-	public static boolean followable(int x,int y,int sub) {
-		if (x>=0 && x<groups.length && y>=0 && y<groups[0].length && groups[x][y]!=sub) return true;
-		return false;
-	}
-
-	public static void replaceGroups(int sub, int n) {
-		for (int x=0; x<groups.length; ++x) {
-			for (int y=0; y<groups[0].length; ++y) {
-				if(groups[x][y]==sub) groups[x][y]=n;
+			if ( pixelGrid.isExpandable(i-1,j) && colorsMatch(i,j,i-1,j) ) {
+				pixelStack.push(new int[]{i-1, j});
 			}
+			if ( pixelGrid.isExpandable(i+1,j) && colorsMatch(i,j,i+1,j) ) {
+				pixelStack.push(new int[]{i+1, j});
+			}
+			if ( pixelGrid.isExpandable(i,j-1) && colorsMatch(i,j,i,j-1) ) {
+				pixelStack.push(new int[]{i, j-1});
+			}
+			if ( pixelGrid.isExpandable(i,j+1) && colorsMatch(i,j,i,j+1) ) {
+				pixelStack.push(new int[]{i, j+1});
+			}
+
 		}
+		blue/=count;
+		green/=count;
+		red/=count;
+
+		pixelGrid.addColor(new Color(red, green, blue).getRGB());
+		pixelGrid.addGroupSize( count );
+
+		return count;
 	}
 
-	public static List<BufferedImage> splitLayers(double ratio, int cutoff) {
-		PixelGrid pixelGrid = new PixelGrid(startImage.getWidth(), startImage.getHeight());
-
-		groups = new int[startImage.getWidth()][startImage.getHeight()];
+	public static int splitLayers(int cutoff) {
+		pixelGrid = new PixelGrid(startImage.getWidth(), startImage.getHeight());
+		
 		int count = 0;
-
-		// make a 2d int array for which pixel is in which group
+		int cutoffCount = 0;
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
-				if (groups[x][y]==0) {
-
-						++count;
-						expand(x,y,-1);
-						replaceGroups(-1,count);
+				if ( pixelGrid.isExpandable(x,y) ) {
+					if ( expand(x, y, count) > cutoff ) {
+						cutoffCount++;
+					}
+					count++;							
 				}
 			}
 		}
-
-		// calculate group sizes
-		int[] groupSizes = new int[count];
-		groupConv = new int[count];
-		int temp = 0;
-		int rd = (new Color(200,0,0)).getRGB();
-
-		for (int x=0; x<startImage.getWidth(); ++x) {
-			for (int y=0; y<startImage.getHeight(); ++y) {
-				groupSizes[groups[x][y]-1]+=1;
-			}
-		}
-
-		// add only valid groups
-		List<BufferedImage> layers = new ArrayList<>();
-		layerColors2 = new ArrayList<>();
-		for (int i=0; i<count; ++i) {
-			if (groupSizes[i]>=cutoff) {
-				layers.add(new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR));
-				layerColors2.add( layerColors.get(i).getRGB() );
-				groupConv[i] = temp;
-				++temp;
-			}
-		}
-
-		// write valid groups to layer array
-		for (int x=0; x<startImage.getWidth(); ++x) {
-			for (int y=0; y<startImage.getHeight(); ++y) {
-				if (groupSizes[groups[x][y]-1] >= cutoff) {
-					layers.get( groupConv[groups[x][y]-1] ).setRGB(x,y,rd); 
-				}
-			}
-		}
-		System.out.println("done making separate image layers");
-
-		// reimplement sobel later
-
-		System.out.println("done applying sobel operator");
-		return layers;
+		System.out.println("done making " + cutoffCount + " separate image layers.");
+		return count;
 	}
 
-	public static List<Complex> bytes2set(byte[] pixels, int xres, int yres,double scale, int cutoff) {
-		List<Complex> S = new ArrayList<>();
-		int step;
-		if (pixels.length/(xres*yres)==3) {
-		for (int i=0; i<pixels.length; i+=3) {
-			if ( (pixels[i]+pixels[i+1]+pixels[i+2])/3.0 <=-0.5) {
-				int x = (i/3)%xres;
-				int y = (i/3)/xres;
-				S.add( xy2complex(x,y,xres,yres,scale) );
-			}
-		}		} else {
-		for (int i=0; i<pixels.length; i+=4) {
-			if ( (pixels[i+1]+pixels[i+2]+pixels[i+3])/3.0 <=-0.5) {
-				int x = (i/4)%xres;
-				int y = (i/4)/xres;
-				S.add( xy2complex(x,y,xres,yres,scale) );
-			}
-		}		}
-		if (S.size()>cutoff) return S;
-		return null;
+	public static ArrayList<Complex> pixelsToSet(ArrayList<int[]> pixelsList, int xres, int yres,double scale, int cutoff) {
+		ArrayList<Complex> S = new ArrayList<>();
+		for (int[] pixel : pixelsList) {
+				S.add( xy2complex(pixel[0],pixel[1],xres,yres,scale) );
+		}
+		return S;
 	}
 
 	public static Complex norm(List<Complex> S) {
@@ -245,50 +201,20 @@ public class Fractalize {
 		}
 	}
 
-	public static int threadCount = Runtime.getRuntime().availableProcessors();
-	public static int lejas = 80;
-	public static int cutoff = 50;
-	public static double scale = 1.0;
-	public static double ratio = 1.0;
-	public static int maxiters = 16;
-	public static int xres, yres;
 	public static void main(String[] args) throws IOException {
-		// variables for the program
-		int colors = 4;
+		int colors = 5;
 		String fname = "in.png";
-
-		for (int k=0; k<args.length; ++k) {
-				 if (args[k].equals("--scale")) scale = Double.parseDouble(args[k+1]);
-			else if (args[k].equals("--ratio")) ratio = Double.parseDouble(args[k+1]);
-			else if (args[k].equals("--maxiters")) maxiters = Integer.parseInt(args[k+1]);
-			else if (args[k].equals("--lejas")) lejas = Integer.parseInt(args[k+1]);
-			else if (args[k].equals("--colors")) colors = Integer.parseInt(args[k+1]);
-			else if (args[k].equals("--cutoff")) cutoff = Integer.parseInt(args[k+1]);
-			else if (args[k].equals("-i")) fname = args[k+1];
-		}
 
 		// read/segment image
 	    startImage = ImageIO.read(new File("in/"+fname));
 		KMeans kmeans = new KMeans();
 		kImage = kmeans.run(startImage,"out.png",colors,"i");
-		List<BufferedImage> layersList = splitLayers(ratio, cutoff);
-		int segments=layersList.size();
-		System.out.println("segments: "+ segments);
-						
-		// draw the group distribution
-		BufferedImage groupsImg = new BufferedImage(startImage.getWidth(), startImage.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
-		int col;
-		for (int x=0; x<startImage.getWidth(); ++x) {
-			for (int y=0; y<startImage.getHeight(); ++y) {
-				col = Color.getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
-				groupsImg.setRGB(x,y,col);
-			}
-		}
-		ImageIO.write(groupsImg, "png", new File("out/groups.png"));
 
+		int segments = splitLayers(cutoff);				
+		
 		//compute resolution
-		xres = (int)(startImage.getWidth()*ratio);
-		yres = (int)(startImage.getHeight()*ratio);
+		xres = startImage.getWidth();
+		yres = startImage.getHeight();
 		BufferedImage image = new BufferedImage(xres, yres, BufferedImage.TYPE_3BYTE_BGR);
 
 		//create thread pool
@@ -298,10 +224,16 @@ public class Fractalize {
 		//create jobs for threads
 		Queue<FractalizeCallable> jobs = new LinkedList<>();
 		for (int index=0; index<segments; ++index) {
-			jobs.add(new FractalizeCallable(
-				layersList.get(index),
-				layerColors2.get(index)
-			));
+			if (pixelGrid.getGroupSize(index) > cutoff) {
+				jobs.add(new FractalizeCallable(
+								pixelsToSet( pixelGrid.getGroupContents(index),
+								xres,
+								yres,
+								scale,
+								cutoff ),
+								pixelGrid.getGroupColor(index) ));
+			}
+		
 		}
 
 		final int batchSize = threadCount;
@@ -335,7 +267,7 @@ public class Fractalize {
 			ANSI.clearLine();
 
 			ImageIO.write(image, "png", new File( "out/" + fname ));
-			System.out.println("fractal - done");
+			System.out.println("done");
 		}
 		catch (InterruptedException e) {
 			System.out.println("Execution interrupted.");

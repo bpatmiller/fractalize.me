@@ -6,27 +6,22 @@ import java.util.ArrayList;
 import java.util.concurrent.Callable;
 
 public class FractalizeCallable implements Callable<BufferedImage> {
-	private BufferedImage layer;
+	private ArrayList<Complex> S;
 	private int col;
 
-	public FractalizeCallable(BufferedImage layer, int col) {
-		this.layer = layer;
+	public FractalizeCallable(ArrayList<Complex> points, int col) {
+		this.S = points;
 		this.col = col;
 	}
 
 	@Override
 	public BufferedImage call() {
-		byte[] pixels;
-		List<Complex> S, L;
+		ArrayList<Complex> L;
 		double a_n;
 		Complex offset, z, z1;
 		int samecount, k;
-
 		BufferedImage output = new BufferedImage(Fractalize.xres, Fractalize.yres, BufferedImage.TYPE_4BYTE_ABGR);
 
-		pixels = ((DataBufferByte) this.layer.getRaster().getDataBuffer()).getData();
-		S = Fractalize.bytes2set(pixels, Fractalize.xres, Fractalize.yres, Fractalize.scale, Fractalize.cutoff);
-		
 		if (S!=null) {
 			offset = Fractalize.norm(S).scale(Fractalize.scale);
 			Fractalize.normalize(S,offset);
@@ -41,8 +36,8 @@ public class FractalizeCallable implements Callable<BufferedImage> {
 					samecount = 0;
 					z = Fractalize.xy2complex(
 						x,y,
-						(int)((double)Fractalize.xres*Fractalize.ratio),
-						(int)((double)Fractalize.yres*Fractalize.ratio),
+						Fractalize.xres,
+						Fractalize.yres,
 						Fractalize.scale
 					);
 					z = z.minus(offset);
