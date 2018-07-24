@@ -29,7 +29,7 @@ public class Fractalize {
 	public static BufferedImage kImage;
 	public static int[][] groups;
 	public static int[] groupConv;
-	public static List<int[]> layerColors = new ArrayList<>();
+	public static List<Color> layerColors = new ArrayList<>();
 	public static List<Integer> layerColors2;
 
 	// calculates PI(z-z_j)
@@ -124,11 +124,7 @@ public class Fractalize {
         int r = (rgb >> 16) & 0xff;
         int g = (rgb >> 8) & 0xff;
         int b = (rgb) & 0xff;
-
-        //from https://en.wikipedia.org/wiki/Grayscale, calculating luminance
         int gray = (int)(0.2126 * r + 0.7152 * g + 0.0722 * b);
-        //int gray = (r + g + b) / 3;
-
         return gray;
     }
 
@@ -227,10 +223,9 @@ public class Fractalize {
     }
 
 	public static void expand(int x, int y, int sub){
-		int[] temp = new int[3];
-
 		int ct = 0;
-		int col, red, green, blue;
+		int col;
+		int red=0, green=0, blue=0;
 		Stack<int[]> yeet = new Stack<int[]>();
 		yeet.push(new int[]{x, y, sub});
 		int[] curr = null;
@@ -240,9 +235,9 @@ public class Fractalize {
 			// color stuff
 			++ct;
 			col = startImage.getRGB(curr[0],curr[1]);
-			temp[0] = ((col >> 16) & 0xFF) + temp[0];
-			temp[1] = ((col >> 8) & 0xFF) + temp[1];
-			temp[2] = (col & 0xFF) + temp[2];
+			red = ((col >> 16) & 0xFF) + red;
+			green = ((col >> 8) & 0xFF) + green;
+			blue = (col & 0xFF) + blue;
 			// end color stuff
 			groups[curr[0]][curr[1]] = sub;
 
@@ -251,11 +246,11 @@ public class Fractalize {
 			if ( followable(curr[0],curr[1]-1,sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0],curr[1]-1) ) yeet.push(new int[]{curr[0], curr[1]-1, sub});	
 			if ( followable(curr[0],curr[1]+1,sub) && kImage.getRGB(curr[0],curr[1])==kImage.getRGB(curr[0],curr[1]+1) ) yeet.push(new int[]{curr[0], curr[1]+1, sub});
 		}
-		temp[0] = temp[0]/ct;
-		temp[1] = temp[1]/ct;
-		temp[2] = temp[2]/ct;
+		blue/=ct;
+		green/=ct;
+		red/=ct;
 		// color stuff
-		layerColors.add(temp);
+		layerColors.add(new Color(red, green, blue));
 		// end color stuff
 	}
 
@@ -306,7 +301,7 @@ public class Fractalize {
 		for (int i=0; i<count; ++i) {
 			if (groupSizes[i]>=cutoff) {
 				layers.add(new BufferedImage((int)(startImage.getWidth()*ratio),(int)(startImage.getHeight()*ratio), BufferedImage.TYPE_3BYTE_BGR));
-				layerColors2.add( new Color( layerColors.get(i)[0],layerColors.get(i)[1],layerColors.get(i)[2] ).getRGB() );
+				layerColors2.add( layerColors.get(i).getRGB() );
 				groupConv[i] = temp;
 				++temp;
 			}
@@ -405,7 +400,6 @@ public class Fractalize {
 		for (int x=0; x<startImage.getWidth(); ++x) {
 			for (int y=0; y<startImage.getHeight(); ++y) {
 				col = Color.getHSBColor((float)groups[x][y]/(float)segments ,(float)0.6,(float)0.6).getRGB();
-				//col = layerColors2.get(groupConv[groups[x][y]-1]);
 				groupsImg.setRGB(x,y,col);
 			}
 		}
@@ -424,7 +418,6 @@ public class Fractalize {
 		Queue<FractalizeCallable> jobs = new LinkedList<>();
 		for (int index=0; index<segments; ++index) {
 			jobs.add(new FractalizeCallable(
-				index,
 				layersList.get(index),
 				layerColors2.get(index)
 			));
