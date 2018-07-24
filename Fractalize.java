@@ -108,18 +108,6 @@ public class Fractalize {
 		return new Complex(scale*(((double)x/(double)xres)-0.5), scale*(((double)y/(double)yres)-0.5));
 	}
 
-	public static int complex2x(Complex z, int xres, double scale) {
-		int x = (int)(((z.re()/scale)+0.5)*(double)xres);
-		if (x>=0 && x<xres) return x;
-		return 0;
-	}
-
-	public static int complex2y(Complex z, int yres, double scale) {
-		int y = (int)(((z.im()/scale)+0.5)*(double)yres);
-		if (y>=0 && y<yres) return y;
-		return 0;
-	}
-
     public static int getGrayScale(int rgb) {
         int r = (rgb >> 16) & 0xff;
         int g = (rgb >> 8) & 0xff;
@@ -268,6 +256,8 @@ public class Fractalize {
 	}
 
 	public static List<BufferedImage> splitLayers(double ratio, int cutoff) {
+		PixelGrid pixelGrid = new PixelGrid(startImage.getWidth(), startImage.getHeight());
+
 		groups = new int[startImage.getWidth()][startImage.getHeight()];
 		int count = 0;
 
