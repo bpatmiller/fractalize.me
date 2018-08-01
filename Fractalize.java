@@ -204,6 +204,8 @@ public class Fractalize {
 	public static void main(String[] args) throws IOException {
 		int colors = 5;
 		String fname = "in.png";
+		int frames = 10;
+
 
 		// read/segment image
 	    startImage = ImageIO.read(new File("in/"+fname));
@@ -220,66 +222,65 @@ public class Fractalize {
 		//create thread pool
 		ExecutorService service = Executors.newFixedThreadPool(threadCount);
 		System.out.printf("Running with %d threads.\n", threadCount);
-
-		//create jobs for threads
-		Queue<FractalizeCallable> jobs = new LinkedList<>();
-		for (int index=0; index<segments; ++index) {
-			if (pixelGrid.getGroupSize(index) > cutoff) {
-				jobs.add(new FractalizeCallable(
-								pixelsToSet( pixelGrid.getGroupContents(index),
-								xres,
-								yres,
-								scale,
-								cutoff ),
-								pixelGrid.getGroupColor(index) ));
-			}
-		
-		}
-
-		final int batchSize = threadCount;
-		
-		//prepare graphics
-		Graphics2D gfx = image.createGraphics();
-		gfx.clearRect(0, 0, image.getWidth(), image.getHeight());
-
-		int jobsCompleted = 0;
-		ANSI.Progress progress = new ANSI.Progress(32, jobs.size());
-		
-		try {
-			while (!jobs.isEmpty()) {
-				//construct a batch of jobs
-				Queue<FractalizeCallable> batch = new LinkedList<>();
-				for (int i=0; i<batchSize && !jobs.isEmpty(); ++i)
-					batch.add(jobs.poll());
-
-				//collect output images
-				List<Future<BufferedImage>> results = service.invokeAll(batch);
-				
-				//update progress bar
-				jobsCompleted += batchSize;
-				progress.updateValue(jobsCompleted);
-
-				//composite output images
-				for (Future<BufferedImage> fimg : results)
-					gfx.drawImage(fimg.get(), null, null);
+			//create jobs for threads
+			Queue<FractalizeCallable> jobs = new LinkedList<>();
+			for (int index=0; index<segments; ++index) {
+				if (pixelGrid.getGroupSize(index) > cutoff) {
+					jobs.add(new FractalizeCallable(
+									pixelsToSet( pixelGrid.getGroupContents(index),
+									xres,
+									yres,
+									scale,
+									cutoff ),
+									pixelGrid.getGroupColor(index) ));
+				}
+			
 			}
 
-			ANSI.clearLine();
+			final int batchSize = threadCount;
+			
+			//prepare graphics
+			Graphics2D gfx = image.createGraphics();
+			gfx.clearRect(0, 0, image.getWidth(), image.getHeight());
 
-			ImageIO.write(image, "png", new File( "out/" + fname ));
-			System.out.println("done");
-		}
-		catch (InterruptedException e) {
-			System.out.println("Execution interrupted.");
-			e.printStackTrace();
-		}
-		catch (ExecutionException e) {
-			System.out.println("Execution failed.");
-			e.printStackTrace();
-		}
-		finally {
-			service.shutdown();
-			gfx.dispose();
+			int jobsCompleted = 0;
+			ANSI.Progress progress = new ANSI.Progress(32, jobs.size());
+
+			try {
+				while (!jobs.isEmpty()) {
+					//construct a batch of jobs
+					Queue<FractalizeCallable> batch = new LinkedList<>();
+					for (int i=0; i<batchSize && !jobs.isEmpty(); ++i)
+						batch.add(jobs.poll());
+
+					//collect output images
+					List<Future<BufferedImage>> results = service.invokeAll(batch);
+					
+					//update progress bar
+					jobsCompleted += batchSize;
+					progress.updateValue(jobsCompleted);
+
+					//composite output images
+					for (Future<BufferedImage> fimg : results)
+						gfx.drawImage(fimg.get(), null, null);
+				}
+
+				ANSI.clearLine();
+
+				ImageIO.write(image, "png", new File( "out/" + fname + '_' + 0 ));
+				System.out.println("done");
+			}
+			catch (InterruptedException e) {
+				System.out.println("Execution interrupted.");
+				e.printStackTrace();
+			}
+			catch (ExecutionException e) {
+				System.out.println("Execution failed.");
+				e.printStackTrace();
+			}
+			finally {
+				service.shutdown();
+				gfx.dispose();
+			}
 		}
 	}
-}
